@@ -1,42 +1,97 @@
-import { createContext, useEffect, useState  } from "react";
-import { fakeFetchCrypto, fetchAssets } from '../api';
-import { percentDifference } from "../utils";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { fakeFetchCrypto } from '../api';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useAuth } from './authContext';
 
-export const CryptoContext = createContext({
-    asserts: [],
-    crypto: [],
-    loading: false,
-})
+const CryptoContext = createContext({
+  crypto: [],
+  assets: [],
+  loading: false,
+  addAsset: () => {},
+  removeAsset: () => {},
+});
 
-export function CryptoContextProvider({children}){
-    const [loading, setLoading] = useState(false)
-    const [crypto, setCrypto] = useState([])
-    const [assets, setAssets] = useState([])
+export function CryptoContextProvider({ children }) {
+  const [loading, setLoading] = useState(false);
+  const [crypto, setCrypto] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const { user } = useAuth();
 
-    useEffect(() => {
-        async function preload(){
-            setLoading(true)
-            const {result} = await fakeFetchCrypto()
-            const assets = await fetchAssets()
+  useEffect(() => {
+    async function preload() {
+      setLoading(true);
+      try {
+        const cryptoResponse = await fakeFetchCrypto();
+        setCrypto(cryptoResponse.result || []);
+      } catch (error) {
+        console.error('Error loading crypto data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    preload();
+  }, []);
 
-            setAssets(assets.map(asset =>{
-                const coin = result.find(c => c.id === asset.id)
-                return {
-                    grow: asset.price < coin.price,
-                    growPercent: percentDifference(asset.price, coin.price),
-                    totalAmount: asset.amount * coin.price,
-                    totalProfit: asset.amount * coin.price - asset.amount * asset.price,
-                    ... asset
-                }
-            }))
-            setCrypto(result)
-            setLoading(false)
-        }
-        preload()
-    },[])
-    return (
-        <CryptoContext.Provider value={{loading, crypto, assets}}>
-        {children}
-        </CryptoContext.Provider>
-    )}
+  useEffect(() => {
+    if (!user) {
+      setAssets([]);
+      return;
+    }
 
+    const unsubscribe = onSnapshot(doc(db, 'users', user.uid), doc => {
+      if (doc.exists()) {
+        setAssets(doc.data().assets || []);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addAsset = async asset => {
+    if (!user) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const newAssets = [...assets];
+    const existingIndex = newAssets.findIndex(a => a.id === asset.id);
+
+    if (existingIndex >= 0) {
+      newAssets[existingIndex].amount += asset.amount;
+    } else {
+      newAssets.push(asset);
+    }
+
+    await updateDoc(userRef, {
+      assets: newAssets,
+    });
+  };
+
+  const removeAsset = async assetId => {
+    if (!user) return;
+
+    const userRef = doc(db, 'users', user.uid);
+    const newAssets = assets.filter(a => a.id !== assetId);
+
+    await updateDoc(userRef, {
+      assets: newAssets,
+    });
+  };
+
+  return (
+    <CryptoContext.Provider
+      value={{
+        loading,
+        crypto,
+        assets,
+        addAsset,
+        removeAsset,
+      }}
+    >
+      {children}
+    </CryptoContext.Provider>
+  );
+}
+
+export function useCrypto() {
+  return useContext(CryptoContext);
+}

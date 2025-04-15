@@ -1,6 +1,5 @@
 import { Layout } from 'antd';
 
-
 const contentStyle = {
   textAlign: 'center',
   minHeight: 'calc(100vh - 60px',
@@ -10,8 +9,6 @@ const contentStyle = {
   padding: '1rem',
 };
 
-export default function AppContent(){
-    return( 
-         <Layout.Content style={contentStyle}>Content</Layout.Content>
-    )
+export default function AppContent() {
+  return <Layout.Content style={contentStyle}>Content</Layout.Content>;
 }

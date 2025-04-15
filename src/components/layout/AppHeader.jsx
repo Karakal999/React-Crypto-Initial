@@ -38,27 +38,25 @@ const options = [
   },
 ];
 
-
-export default function AppHeader(){
-    return (
-              <Layout.Header style={headerStyle}>
-                  <Select
-                    mode="multiple"
-                    style={{ width: '100%' }}
-                    placeholder="select one country"
-                    defaultValue={['china']}
-                    // onChange={handleChange}
-                    options={options}
-                    optionRender={(option) => (
-                      <Space>
-                        <span role="img" aria-label={option.data.label}>
-                          {option.data.emoji}
-                        </span>
-                        {option.data.desc}
-                      </Space>
-                    )}
-                  />              
-                  </Layout.Header>
-
-    )
+export default function AppHeader() {
+  return (
+    <Layout.Header style={headerStyle}>
+      <Select
+        mode="multiple"
+        style={{ width: '100%' }}
+        placeholder="select one country"
+        defaultValue={['china']}
+        // onChange={handleChange}
+        options={options}
+        optionRender={option => (
+          <Space>
+            <span role="img" aria-label={option.data.label}>
+              {option.data.emoji}
+            </span>
+            {option.data.desc}
+          </Space>
+        )}
+      />
+    </Layout.Header>
+  );
 }
